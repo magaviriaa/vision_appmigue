@@ -3,60 +3,61 @@ import streamlit as st
 import base64
 from openai import OpenAI
 
-# Function to encode the image to base64
+# Función para convertir la imagen en base64
 def encode_image(image_file):
     return base64.b64encode(image_file.getvalue()).decode("utf-8")
 
+# Configuración inicial de la página
+st.set_page_config(page_title="Taylor Vision: Analiza tus imágenes", layout="centered", initial_sidebar_state="collapsed")
 
-st.set_page_config(page_title="Analisis de imagen", layout="centered", initial_sidebar_state="collapsed")
-# Streamlit page setup
-st.title("Análisis de Imagen:🤖🏞️")
-ke = st.text_input('Ingresa tu Clave')
-os.environ['OPENAI_API_KEY'] = ke
+# Encabezado
+st.title("👁️✨ Taylor Vision")
+st.markdown("### Deja que **Taylor** te ayude a interpretar lo que ve en tus imágenes.")
 
+st.caption("Sube una foto, agrega contexto si quieres... y deja que la magia ocurra 💫")
 
-# Retrieve the OpenAI API Key from secrets
-api_key = os.environ['OPENAI_API_KEY']
+# Clave API
+ke = st.text_input("🔑 Ingresa tu Clave de OpenAI")
+os.environ["OPENAI_API_KEY"] = ke
+api_key = os.environ["OPENAI_API_KEY"]
 
-# Initialize the OpenAI client with the API key
+# Inicializar cliente OpenAI
 client = OpenAI(api_key=api_key)
 
-# File uploader allows user to add their own image
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+# Subir imagen
+uploaded_file = st.file_uploader("📸 Sube una imagen (JPG, PNG o JPEG)", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
-    # Display the uploaded image
-    with st.expander("Image", expanded = True):
+    with st.expander("🖼️ Vista previa de la imagen", expanded=True):
         st.image(uploaded_file, caption=uploaded_file.name, use_container_width=True)
 
-# Toggle for showing additional details input
-show_details = st.toggle("Pregunta algo específico sobre la imagen", value=False)
+# Activar preguntas específicas
+show_details = st.toggle("¿Quieres que Taylor analice algo específico?", value=False)
 
 if show_details:
-    # Text input for additional details about the image, shown only if toggle is True
     additional_details = st.text_area(
-        "Adiciona contexto de la imagen aqui:",
+        "✏️ Escribe aquí lo que te gustaría que Taylor analice o tenga en cuenta:",
         disabled=not show_details
     )
 
-# Button to trigger the analysis
-analyze_button = st.button("Analiza la imagen", type="secondary")
+# Botón para analizar
+analyze_button = st.button("🔍 Analizar imagen", type="secondary")
 
-# Check if an image has been uploaded, if the API key is available, and if the button has been pressed
+# Análisis
 if uploaded_file is not None and api_key and analyze_button:
 
-    with st.spinner("Analizando ..."):
-        # Encode the image
+    with st.spinner("✨ Taylor está observando y pensando..."):
+        # Codificar la imagen
         base64_image = encode_image(uploaded_file)
-    
-        prompt_text = ("Describe what you see in the image in spanish")
-    
+
+        prompt_text = "Describe lo que ves en la imagen en español, con atención al detalle."
+
         if show_details and additional_details:
             prompt_text += (
-                f"\n\nAdditional Context Provided by the User:\n{additional_details}"
+                f"\n\nContexto adicional proporcionado por el usuario:\n{additional_details}"
             )
-    
-        # Create the payload for the completion request - CORRECTED FORMAT
+
+        # Crear solicitud
         messages = [
             {
                 "role": "user",
@@ -71,28 +72,31 @@ if uploaded_file is not None and api_key and analyze_button:
                 ],
             }
         ]
-    
-        # Make the request to the OpenAI API
+
+        # Solicitud a OpenAI
         try:
-            # Stream the response
             full_response = ""
             message_placeholder = st.empty()
+
             for completion in client.chat.completions.create(
-                model="gpt-4o", messages=messages,   
-                max_tokens=1200, stream=True
+                model="gpt-4o",
+                messages=messages,
+                max_tokens=1200,
+                stream=True
             ):
-                # Check if there is content to display
                 if completion.choices[0].delta.content is not None:
                     full_response += completion.choices[0].delta.content
                     message_placeholder.markdown(full_response + "▌")
-            # Final update to placeholder after the stream ends
+
             message_placeholder.markdown(full_response)
-    
+            st.success("✨ Análisis completado por Taylor.")
+
         except Exception as e:
-            st.error(f"An error occurred: {e}")
+            st.error(f"Ocurrió un error: {e}")
+
 else:
-    # Warnings for user action required
+    # Mensajes de advertencia
     if not uploaded_file and analyze_button:
-        st.warning("Please upload an image.")
+        st.warning("📁 Por favor, sube una imagen antes de continuar.")
     if not api_key:
-        st.warning("Por favor ingresa tu API key.")
+        st.warning("🔐 Ingresa tu clave de API para que Taylor pueda analizar la imagen.")
